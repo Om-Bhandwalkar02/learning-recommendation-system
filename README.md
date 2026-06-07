@@ -174,19 +174,22 @@ ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Serves the frontend |
-| `GET` | `/health` | Health check |
-| `POST` | `/api/analyze/recommend` | Get ML course recommendations |
-| `POST` | `/api/analyze/skill-gap` | Identify skill gaps |
-| `POST` | `/api/analyze/roadmap` | Generate learning roadmap |
-| `POST` | `/api/analyze/resume-analyze` | Analyze resume text |
-| `POST` | `/api/analyze/explain` | AI explanation for a course |
-| `POST` | `/api/advisor/chat` | AI career advisor chat |
-| `GET` | `/api/advisor/status` | Check Groq API connectivity |
+| `GET` | `/api/v1/health` | Health check |
+| `GET` | `/api/v1/stats` | Dataset statistics |
+| `POST` | `/api/v1/recommend` | Get ML course recommendations |
+| `POST` | `/api/v1/roadmap` | Generate learning roadmap |
+| `POST` | `/api/v1/skill-gap` | Identify skill gaps |
+| `POST` | `/api/v1/resume-analyze` | Analyze resume text |
+| `POST` | `/api/v1/explain` | AI explanation for a course |
+| `POST` | `/api/v1/career-advice` | AI career advisor |
+| `GET` | `/api/v1/courses` | Browse all courses |
+| `GET` | `/api/v1/skills` | List all available skills |
+| `GET` | `/api/v1/categories` | List all categories |
 
 ### Example — Recommend Courses
 
 ```bash
-curl -X POST http://localhost:8000/api/analyze/recommend \
+curl -X POST http://localhost:8000/api/v1/recommend \
   -H "Content-Type: application/json" \
   -d '{
     "skills": ["python", "machine learning", "sql"],
@@ -221,27 +224,38 @@ curl -X POST http://localhost:8000/api/analyze/recommend \
 
 ```
 learning-recommendation-system/
+├── main.py                          # App entry point — starts the server
+├── requirements.txt                 # Python dependencies
+├── .env.example                     # Environment template (copy → .env)
+├── .gitignore
+├── README.md
+│
 ├── backend/
-│   ├── main.py                  # FastAPI app entry point
+│   ├── core/
+│   │   └── config.py               # App settings (loaded from .env)
+│   ├── models/
+│   │   └── schemas.py              # Pydantic request/response models
 │   ├── api/
 │   │   └── routes/
-│   │       ├── analyze.py       # /recommend, /skill-gap, /roadmap, /resume
-│   │       └── advisor.py       # /chat, /status
+│   │       ├── recommend.py        # /recommend, /roadmap, /courses, /skills
+│   │       ├── analyze.py          # /skill-gap, /resume-analyze, /explain, /career-advice
+│   │       └── admin.py            # /health, /stats
 │   └── ml/
-│       ├── engine.py            # TF-IDF model + scoring logic
-│       └── groq_service.py      # Groq API wrapper
+│       ├── engine.py               # TF-IDF vectorizer + cosine similarity + scorer
+│       ├── groq_service.py         # Groq AI (LLaMA) API wrapper
+│       └── resume_analyzer.py      # Keyword-based resume fallback parser
+│
 ├── data/
-│   └── courses.csv              # 150 curated courses
+│   └── courses.csv                 # 150 curated courses (17 attributes)
+│
 ├── frontend/
-│   ├── index.html               # Single-page app shell
+│   ├── index.html                  # Single-page app shell
 │   └── assets/
 │       └── js/
-│           └── app.js           # All frontend logic
-├── docs/
-│   └── screenshots/             # App screenshots for README
-├── .env.example                 # Template (copy → .env, add key)
-├── requirements.txt
-└── README.md
+│           └── app.js              # All frontend logic (tabs, API calls, UI)
+│
+└── docs/
+    └── screenshots/                # App screenshots used in this README
 ```
 
 ---
