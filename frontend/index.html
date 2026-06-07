@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LearnPath AI — Intelligent Course Recommendations</title>
+  <meta name="description" content="AI-powered learning recommendation system. Discover courses, analyze skill gaps, and build your learning roadmap." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Syne (display) + DM Sans (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body:    ['DM Sans', 'sans-serif'],
+          },
+          fontWeight: {
+            '600': '600',
+            '700': '700',
+            '800': '800',
+          },
+          colors: {
+            ink:    '#0D0F12',
+            slate:  '#1A1D23',
+            panel:  '#21252D',
+            border: '#2E3340',
+            muted:  '#5A6070',
+            ghost:  '#8896A8',
+            snow:   '#F0F4F8',
+            acid:   '#B8FF3C',
+            cyan:   '#38F5E8',
+            violet: '#7C6EFF',
+            amber:  '#FFB547',
+            rose:   '#FF5C6A',
+          },
+          borderRadius: {
+            '10': '10px',
+            '12': '12px',
+          },
+          zIndex: {
+            '1': '1',
+          },
+          boxShadow: {
+            'acid': '0 0 40px rgba(184,255,60,0.15)',
+            'cyan': '0 0 40px rgba(56,245,232,0.15)',
+            'glow': '0 4px 32px rgba(0,0,0,0.4)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0D0F12;
+      color: #F0F4F8;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6, .font-display {
+      font-family: 'Syne', sans-serif;
+    }
+
+    /* ── Background grid texture ── */
+    .bg-grid::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(46,51,64,0.4) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(46,51,64,0.4) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Gradient orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 600px; height: 600px; top: -200px; right: -100px; background: rgba(124,110,255,0.08); }
+    .orb-2 { width: 500px; height: 500px; bottom: -100px; left: -100px; background: rgba(56,245,232,0.06); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1A1D23; }
+    ::-webkit-scrollbar-thumb { background: #2E3340; border-radius: 3px; }
+
+    /* ── Tag/chip ── */
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 99px;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.02em;
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+    }
+    .tag-acid   { background: rgba(184,255,60,0.12);  color: #B8FF3C; border: 1px solid rgba(184,255,60,0.25); }
+    .tag-cyan   { background: rgba(56,245,232,0.10);  color: #38F5E8; border: 1px solid rgba(56,245,232,0.22); }
+    .tag-violet { background: rgba(124,110,255,0.12); color: #9D91FF; border: 1px solid rgba(124,110,255,0.25); }
+    .tag-amber  { background: rgba(255,181,71,0.12);  color: #FFB547; border: 1px solid rgba(255,181,71,0.25); }
+    .tag-ghost  { background: rgba(88,96,112,0.18);   color: #8896A8; border: 1px solid rgba(88,96,112,0.25); }
+    .tag-rose   { background: rgba(255,92,106,0.10);  color: #FF5C6A; border: 1px solid rgba(255,92,106,0.22); }
+
+    /* ── Skill pill (interactive) ── */
+    .skill-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: 99px;
+      background: rgba(46,51,64,0.8); color: #8896A8;
+      border: 1px solid #2E3340;
+      font-size: 13px; cursor: pointer; transition: all 0.18s ease;
+      user-select: none;
+    }
+    .skill-pill:hover { border-color: #38F5E8; color: #38F5E8; background: rgba(56,245,232,0.07); }
+    .skill-pill.selected { background: rgba(184,255,60,0.12); color: #B8FF3C; border-color: rgba(184,255,60,0.4); }
+
+    /* ── Card ── */
+    .card {
+      background: #21252D;
+      border: 1px solid #2E3340;
+      border-radius: 16px;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover { border-color: rgba(124,110,255,0.35); transform: translateY(-2px); box-shadow: 0 8px 48px rgba(0,0,0,0.35); }
+
+    /* ── Course card ── */
+    .course-card { display: flex; flex-direction: column; height: 100%; }
+    .score-ring {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: conic-gradient(#B8FF3C var(--pct), #2E3340 0);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .score-ring::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      background: #21252D;
+      border-radius: 50%;
+    }
+    .score-ring span {
+      position: relative; z-index: 1;
+      font-size: 11px; font-weight: 700;
+      color: #B8FF3C; font-family: 'Syne', sans-serif;
+    }
+
+    /* ── Tab navigation ── */
+    .tab-btn {
+      display: flex; align-items: center; gap: 6px; padding: 10px 18px;
+      border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer;
+      transition: all 0.18s; color: #5A6070; background: transparent;
+      border: 1px solid transparent; white-space: nowrap;
+    }
+    .tab-btn:hover { color: #F0F4F8; background: rgba(46,51,64,0.5); }
+    .tab-btn.active {
+      color: #0D0F12; background: #B8FF3C;
+      border-color: transparent; font-weight: 600;
+    }
+    .tab-btn.active svg { stroke: #0D0F12; }
+
+    /* ── Input ── */
+    .input-field {
+      width: 100%; background: #1A1D23; border: 1px solid #2E3340;
+      border-radius: 12px; padding: 12px 16px;
+      color: #F0F4F8; font-size: 14px; font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.18s, box-shadow 0.18s; outline: none;
+      resize: none;
+    }
+    .input-field:focus { border-color: rgba(184,255,60,0.5); box-shadow: 0 0 0 3px rgba(184,255,60,0.08); }
+    .input-field::placeholder { color: #5A6070; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 24px; border-radius: 12px;
+      background: #B8FF3C; color: #0D0F12;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+      cursor: pointer; transition: all 0.18s; border: none; outline: none;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: #cbff6c; transform: translateY(-1px); box-shadow: 0 4px 24px rgba(184,255,60,0.35); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px 20px; border-radius: 12px;
+      background: transparent; color: #8896A8;
+      font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 14px;
+      cursor: pointer; transition: all 0.18s;
+      border: 1px solid #2E3340;
+    }
+    .btn-secondary:hover { background: rgba(46,51,64,0.6); color: #F0F4F8; border-color: rgba(124,110,255,0.35); }
+
+    /* ── Progress bar ── */
+    .progress-bar { height: 6px; border-radius: 3px; background: #2E3340; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+
+    /* ── Fade-in animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.35s ease both; }
+    .fade-up-delay-1 { animation-delay: 0.08s; }
+    .fade-up-delay-2 { animation-delay: 0.16s; }
+    .fade-up-delay-3 { animation-delay: 0.24s; }
+
+    /* ── Score gradient text ── */
+    .gradient-text {
+      background: linear-gradient(135deg, #B8FF3C, #38F5E8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Roadmap phase line ── */
+    .phase-line {
+      width: 2px;
+      background: linear-gradient(to bottom, #B8FF3C, #38F5E8, #7C6EFF);
+      margin-left: 19px;
+    }
+
+    /* ── Tooltip ── */
+    [data-tooltip] { position: relative; cursor: help; }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute; bottom: calc(100% + 8px); left: 50%;
+      transform: translateX(-50%);
+      background: #1A1D23; border: 1px solid #2E3340; border-radius: 8px;
+      padding: 6px 12px; font-size: 12px; color: #8896A8;
+      white-space: nowrap; pointer-events: none; opacity: 0;
+      transition: opacity 0.18s; z-index: 100;
+    }
+    [data-tooltip]:hover::after { opacity: 1; }
+
+    /* ── Section ── */
+    .section { position: relative; z-index: 1; }
+
+    /* ── Notification toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: #21252D; border: 1px solid #2E3340; border-radius: 12px;
+      padding: 14px 20px; display: flex; align-items: center; gap: 10px;
+      font-size: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transform: translateX(120%); transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+    }
+    #toast.show { transform: translateX(0); }
+
+    /* ── Filter select ── */
+    .filter-select {
+      width: 100%; background: #1A1D23; border: 1px solid #2E3340;
+      border-radius: 10px; padding: 10px 14px;
+      color: #F0F4F8; font-size: 13px; cursor: pointer;
+      outline: none; appearance: none;
+    }
+    .filter-select:focus { border-color: rgba(184,255,60,0.4); }
+    option { background: #1A1D23; }
+
+    /* ── Stat card ── */
+    .stat-card {
+      background: linear-gradient(135deg, #21252D, #1A1D23);
+      border: 1px solid #2E3340; border-radius: 14px; padding: 20px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+
+    /* ── Gap skill row ── */
+    .gap-skill {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; border-radius: 10px; background: rgba(46,51,64,0.4);
+      border: 1px solid #2E3340;
+    }
+
+    /* line-clamp */
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  </style>
+</head>
+<body class="bg-grid">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <!-- ═══════════════════════════ HEADER ═══ -->
+  <header class="relative z-10 border-b border-border/60 backdrop-blur-sm bg-ink/80 sticky top-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-acid flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D0F12" stroke-width="2.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <span class="font-display font-bold text-xl tracking-tight text-snow">LearnPath <span class="text-acid">AI</span></span>
+        </div>
+
+        <!-- Desktop nav tabs -->
+        <nav class="hidden md:flex items-center gap-1">
+          <button class="tab-btn active" onclick="switchTab('recommend')" id="tab-recommend">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Recommend
+          </button>
+          <button class="tab-btn" onclick="switchTab('gap')" id="tab-gap">
+            <i data-lucide="git-branch" class="w-4 h-4"></i> Skill Gap
+          </button>
+          <button class="tab-btn" onclick="switchTab('roadmap')" id="tab-roadmap">
+            <i data-lucide="map" class="w-4 h-4"></i> Roadmap
+          </button>
+          <button class="tab-btn" onclick="switchTab('resume')" id="tab-resume">
+            <i data-lucide="file-text" class="w-4 h-4"></i> Resume
+          </button>
+          <button class="tab-btn" onclick="switchTab('advisor')" id="tab-advisor">
+            <i data-lucide="brain" class="w-4 h-4"></i> AI Advisor
+          </button>
+        </nav>
+
+        <!-- API status badge -->
+        <div id="api-status" class="flex items-center gap-2 tag tag-ghost text-xs">
+          <span class="w-2 h-2 rounded-full bg-ghost animate-pulse"></span>
+          <span>Connecting…</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile nav -->
+  <div class="md:hidden sticky top-16 z-10 bg-ink/90 backdrop-blur border-b border-border/50 px-3 py-2 overflow-x-auto">
+    <div class="flex gap-1 min-w-max">
+      <button class="tab-btn active text-xs py-2 px-3" onclick="switchTab('recommend')" id="tab-m-recommend">⚡ Recommend</button>
+      <button class="tab-btn text-xs py-2 px-3" onclick="switchTab('gap')" id="tab-m-gap">🔍 Skill Gap</button>
+      <button class="tab-btn text-xs py-2 px-3" onclick="switchTab('roadmap')" id="tab-m-roadmap">🗺 Roadmap</button>
+      <button class="tab-btn text-xs py-2 px-3" onclick="switchTab('resume')" id="tab-m-resume">📄 Resume</button>
+      <button class="tab-btn text-xs py-2 px-3" onclick="switchTab('advisor')" id="tab-m-advisor">🤖 AI</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ MAIN ═══ -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 relative" style="z-index:1">
+
+    <!-- Hero -->
+    <div id="hero-section" class="section mb-10 fade-up">
+      <div class="text-center max-w-3xl mx-auto">
+        <div class="inline-flex items-center gap-2 tag tag-acid mb-4 text-xs">
+          <i data-lucide="zap" class="w-3 h-3"></i>
+          University AI &amp; Data Science Project · Project #20
+        </div>
+        <h1 class="font-display text-5xl md:text-6xl font-extrabold mb-4 leading-tight">
+          Your <span class="gradient-text">AI-powered</span><br>learning compass
+        </h1>
+        <p class="text-ghost text-lg max-w-xl mx-auto leading-relaxed mb-8">
+          Enter your skills. Get personalized course recommendations, analyze skill gaps,
+          and generate a complete learning roadmap — powered by TF-IDF + Cosine Similarity.
+        </p>
+        <div class="flex flex-wrap justify-center gap-6 text-sm">
+          <div class="flex items-center gap-2 text-ghost">
+            <span class="text-acid font-display font-bold text-xl" id="stat-courses">—</span>
+            <span>Courses</span>
+          </div>
+          <div class="text-border">|</div>
+          <div class="flex items-center gap-2 text-ghost">
+            <span class="text-cyan font-display font-bold text-xl" id="stat-skills">—</span>
+            <span>Skills Indexed</span>
+          </div>
+          <div class="text-border">|</div>
+          <div class="flex items-center gap-2 text-ghost">
+            <span class="text-violet font-display font-bold text-xl" id="stat-platforms">—</span>
+            <span>Platforms</span>
+          </div>
+          <div class="text-border">|</div>
+          <div class="flex items-center gap-2 text-ghost">
+            <span class="text-amber font-display font-bold text-xl" id="stat-roles">—</span>
+            <span>Career Roles</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: RECOMMEND ─── -->
+    <div id="panel-recommend" class="section">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Input panel -->
+        <div class="lg:col-span-1 space-y-5">
+          <div class="card p-5">
+            <h3 class="font-display font-semibold text-snow mb-1 flex items-center gap-2">
+              <i data-lucide="code-2" class="w-4 h-4 text-acid"></i>
+              Your Current Skills
+            </h3>
+            <p class="text-ghost text-xs mb-4">Type skills separated by commas, or click suggestions below.</p>
+
+            <div class="flex gap-2 mb-3">
+              <input type="text" id="skill-input" class="input-field" placeholder="e.g. python, machine learning…" />
+              <button onclick="addSkillFromInput()" class="btn-secondary px-4">Add</button>
+            </div>
+
+            <div id="selected-skills" class="flex flex-wrap gap-2 min-h-[32px] mb-4"></div>
+
+            <div>
+              <p class="text-ghost text-xs mb-2">Quick add:</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'python')">python</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'machine learning')">machine learning</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'sql')">SQL</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'deep learning')">deep learning</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'tensorflow')">tensorflow</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'react')">react</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'docker')">docker</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'aws')">aws</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'nlp')">nlp</span>
+                <span class="skill-pill text-xs" onclick="toggleSuggestion(this,'javascript')">javascript</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="card p-5 space-y-4">
+            <h3 class="font-display font-semibold text-snow flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-violet"></i>
+              Filters
+            </h3>
+
+            <div>
+              <label class="text-ghost text-xs mb-1.5 block">Target Role</label>
+              <input type="text" id="target-role" class="input-field" placeholder="e.g. Data Scientist" list="roles-datalist" />
+              <datalist id="roles-datalist"></datalist>
+            </div>
+
+            <div>
+              <label class="text-ghost text-xs mb-1.5 block">Difficulty Level</label>
+              <select id="difficulty" class="filter-select">
+                <option value="All">All Levels</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-ghost text-xs mb-1.5 block">Sort Results By</label>
+              <select id="sort-by" class="filter-select">
+                <option value="score">Recommendation Score</option>
+                <option value="rating">Course Rating</option>
+                <option value="enrolled">Most Popular</option>
+                <option value="duration">Duration</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-ghost text-xs mb-1.5 block">Max Duration (hours)</label>
+              <input type="number" id="max-duration" class="input-field" placeholder="e.g. 50" min="1" max="500" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <label class="text-ghost text-xs">Free Courses Only</label>
+              <button onclick="toggleFreeOnly(this)" id="free-toggle"
+                class="w-10 h-5 bg-border rounded-full relative transition-colors duration-200">
+                <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-ghost rounded-full transition-transform duration-200"></span>
+              </button>
+            </div>
+
+            <div>
+              <label class="text-ghost text-xs mb-1.5 block">
+                Number of Results: <span id="n-label">10</span>
+              </label>
+              <input type="range" id="n-recs" min="3" max="20" value="10"
+                class="w-full accent-acid cursor-pointer"
+                oninput="document.getElementById('n-label').textContent=this.value" />
+            </div>
+          </div>
+
+          <button class="btn-primary w-full py-3 text-base" onclick="getRecommendations()" id="rec-btn">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+            Get Recommendations
+          </button>
+        </div>
+
+        <!-- Results panel -->
+        <div class="lg:col-span-2">
+          <div id="rec-empty" class="card p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-violet/10 border border-violet/20 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="search" class="w-8 h-8 text-violet"></i>
+            </div>
+            <h3 class="font-display font-semibold text-snow text-lg mb-2">Ready to discover</h3>
+            <p class="text-ghost text-sm max-w-xs mx-auto">Add your skills on the left and hit <span class="text-acid">Get Recommendations</span> to find your perfect courses.</p>
+          </div>
+          <div id="rec-cards" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: SKILL GAP ─── -->
+    <div id="panel-gap" class="section hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="card p-5">
+            <h3 class="font-display font-semibold text-snow mb-1 flex items-center gap-2">
+              <i data-lucide="git-branch" class="w-4 h-4 text-cyan"></i>
+              Skill Gap Analysis
+            </h3>
+            <p class="text-ghost text-xs mb-4">Discover what skills you're missing for your dream role.</p>
+            <div class="space-y-4">
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Your Current Skills</label>
+                <textarea id="gap-skills" class="input-field h-24"
+                  placeholder="python, machine learning, SQL, numpy, pandas…"></textarea>
+              </div>
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Target Role</label>
+                <input type="text" id="gap-role" class="input-field"
+                  placeholder="e.g. Machine Learning Engineer" list="roles-datalist2" />
+                <datalist id="roles-datalist2"></datalist>
+              </div>
+              <button class="btn-primary w-full" onclick="analyzeSkillGap()" id="gap-btn">
+                <i data-lucide="git-branch" class="w-4 h-4"></i> Analyze Gap
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div id="gap-empty" class="card p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-cyan/10 border border-cyan/20 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="git-branch" class="w-8 h-8 text-cyan"></i>
+            </div>
+            <h3 class="font-display font-semibold text-snow text-lg mb-2">Identify your gaps</h3>
+            <p class="text-ghost text-sm max-w-xs mx-auto">Enter your skills and target role to see exactly what you need to learn.</p>
+          </div>
+          <div id="gap-content" class="hidden space-y-5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: ROADMAP ─── -->
+    <div id="panel-roadmap" class="section hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="card p-5">
+            <h3 class="font-display font-semibold text-snow mb-1 flex items-center gap-2">
+              <i data-lucide="map" class="w-4 h-4 text-amber"></i>
+              Learning Roadmap
+            </h3>
+            <p class="text-ghost text-xs mb-4">Generate a structured, phased plan to reach your career goal.</p>
+            <div class="space-y-4">
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Your Current Skills</label>
+                <textarea id="rm-skills" class="input-field h-20"
+                  placeholder="python, SQL, statistics…"></textarea>
+              </div>
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Target Role</label>
+                <input type="text" id="rm-role" class="input-field" placeholder="e.g. Data Scientist" />
+              </div>
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">
+                  Timeframe: <span id="tf-label">6</span> months
+                </label>
+                <input type="range" id="timeframe" min="2" max="18" value="6"
+                  class="w-full accent-amber cursor-pointer"
+                  oninput="document.getElementById('tf-label').textContent=this.value" />
+              </div>
+              <button class="btn-primary w-full" style="background:#FFB547;color:#0D0F12"
+                onclick="generateRoadmap()" id="rm-btn">
+                <i data-lucide="map" class="w-4 h-4"></i> Generate Roadmap
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div id="rm-empty" class="card p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-amber/10 border border-amber/20 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="map" class="w-8 h-8 text-amber"></i>
+            </div>
+            <h3 class="font-display font-semibold text-snow text-lg mb-2">Your personalized roadmap</h3>
+            <p class="text-ghost text-sm max-w-xs mx-auto">Set your skills, role, and timeframe to generate a step-by-step learning plan.</p>
+          </div>
+          <div id="rm-content" class="hidden space-y-4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: RESUME ─── -->
+    <div id="panel-resume" class="section hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="card p-5">
+            <h3 class="font-display font-semibold text-snow mb-1 flex items-center gap-2">
+              <i data-lucide="file-text" class="w-4 h-4 text-rose"></i>
+              Resume Analyzer
+            </h3>
+            <p class="text-ghost text-xs mb-4">Paste your resume to extract skills and get tailored recommendations.</p>
+            <div class="space-y-4">
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Resume Text (paste here)</label>
+                <textarea id="resume-text" class="input-field h-40"
+                  placeholder="Paste your resume text here…&#10;&#10;Skills, experience, education, projects…"></textarea>
+              </div>
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Target Role (optional)</label>
+                <input type="text" id="resume-role" class="input-field" placeholder="e.g. ML Engineer" />
+              </div>
+              <button class="btn-primary w-full" style="background:#FF5C6A;"
+                onclick="analyzeResume()" id="resume-btn">
+                <i data-lucide="search" class="w-4 h-4"></i> Analyze Resume
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div id="resume-empty" class="card p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-rose/10 border border-rose/20 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="file-text" class="w-8 h-8 text-rose"></i>
+            </div>
+            <h3 class="font-display font-semibold text-snow text-lg mb-2">Unlock resume insights</h3>
+            <p class="text-ghost text-sm max-w-xs mx-auto">Paste your resume text to automatically extract skills and discover courses tailored to your background.</p>
+          </div>
+          <div id="resume-content" class="hidden space-y-5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TAB: AI ADVISOR ─── -->
+    <div id="panel-advisor" class="section hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="card p-5">
+            <h3 class="font-display font-semibold text-snow mb-1 flex items-center gap-2">
+              <i data-lucide="brain" class="w-4 h-4 text-violet"></i>
+              Groq AI Career Advisor
+            </h3>
+            <p class="text-ghost text-xs mb-4">Get AI-powered, personalized career guidance using Groq's blazing-fast LLM.</p>
+            <div class="space-y-4">
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Your Skills</label>
+                <textarea id="adv-skills" class="input-field h-20"
+                  placeholder="python, machine learning, SQL…"></textarea>
+              </div>
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Target Role</label>
+                <input type="text" id="adv-role" class="input-field" placeholder="e.g. Data Scientist" />
+              </div>
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Years of Experience</label>
+                <input type="number" id="adv-exp" class="input-field" placeholder="e.g. 2" min="0" max="50" />
+              </div>
+              <div>
+                <label class="text-ghost text-xs mb-1.5 block">Education Level</label>
+                <select id="adv-edu" class="filter-select">
+                  <option value="">Select…</option>
+                  <option>High School</option>
+                  <option>Bachelor's Degree</option>
+                  <option>Master's Degree</option>
+                  <option>PhD</option>
+                  <option>Self-taught</option>
+                </select>
+              </div>
+              <button class="btn-primary w-full" style="background:#7C6EFF;"
+                onclick="getCareerAdvice()" id="adv-btn">
+                <i data-lucide="brain" class="w-4 h-4"></i> Get AI Advice
+              </button>
+            </div>
+          </div>
+
+          <div class="card p-4" style="border-color:rgba(124,110,255,0.3)">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-violet/15 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="sparkles" class="w-4 h-4 text-violet"></i>
+              </div>
+              <div>
+                <p class="text-snow text-sm font-medium">Groq AI Status</p>
+                <p class="text-ghost text-xs mt-0.5" id="gemini-status-text">Checking…</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2">
+          <div id="adv-empty" class="card p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-violet/10 border border-violet/20 flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="brain" class="w-8 h-8 text-violet"></i>
+            </div>
+            <h3 class="font-display font-semibold text-snow text-lg mb-2">Your AI career advisor</h3>
+            <p class="text-ghost text-sm max-w-xs mx-auto">Get personalized, actionable career advice powered by Groq AI (Llama 3.3 70B).</p>
+          </div>
+          <div id="adv-content" class="hidden space-y-5"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast">
+    <i data-lucide="info" class="w-4 h-4 text-cyan"></i>
+    <span id="toast-msg">Notification</span>
+  </div>
+
+  <!-- Course Modal -->
+  <div id="modal-overlay"
+    class="fixed inset-0 bg-ink/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4"
+    onclick="closeModal(event)">
+    <div class="card max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 fade-up"
+      onclick="event.stopPropagation()">
+      <div class="flex justify-between items-start mb-5">
+        <div id="modal-header"></div>
+        <button onclick="closeModalForce()"
+          class="text-ghost hover:text-snow transition-colors ml-4 flex-shrink-0">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
